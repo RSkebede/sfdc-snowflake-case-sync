@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:snowflake="http://www.mulesoft.org/schema/mule/snowflake" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/snowflake http://www.mulesoft.org/schema/mule/snowflake/current/mule-snowflake.xsd">
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="27616e2d-50ef-4e3f-b69b-5f4e8bb78246" >
+		<salesforce:basic-connection username="${secure::sfdc.username}" password="${secure::sfdc.password}" securityToken="${secure::sfdc.token}" url="${secure::sfdc.authURL}" />
+	</salesforce:sfdc-config>
+	<snowflake:snowflake-config name="Snowflake_Config" doc:name="Snowflake Config" doc:id="8275a3b4-8371-41d3-af24-627f8cef6330" >
+		<snowflake:snowflake-connection accountName="${secure::snowflake.account.name}" warehouse="${secure::snowflake.warehouse}" database="${secure::snowflake.database}" schema="${secure::snowflake.schema}" user="${secure::snowflake.user}" password="${secure::snowflake.password}" role="${secure::snowflake.role}" />
+	</snowflake:snowflake-config>
+</mule>

@@ -1,0 +1,22 @@
+"sfdc":
+  "username": "![encryptedUsername]"
+  "password": "![encryptedPassword]"
+  "authUrl": "![encryptedAuthUrl]"
+  "token": "![encryptedToken]"
+  
+
+"scheduler":
+  "cron": "0 0 1 * * ?"
+  "timezone" : "America/New_York"
+  
+"snowflake": 
+  "account":
+    "name": "![encryptedName]"
+  "warehouse": "![encryptedWarehouse]"
+  "database" : "![encryptedDatabase]"
+  "schema" : "![encryptedSchema]"
+  "user" : "![encryptedUser]"
+  "password" : "![encryptedPassword]"
+  "role" : "![encryptedRole]"
+  
+

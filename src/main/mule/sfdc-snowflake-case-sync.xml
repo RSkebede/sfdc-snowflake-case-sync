@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:snowflake="http://www.mulesoft.org/schema/mule/snowflake" xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/snowflake http://www.mulesoft.org/schema/mule/snowflake/current/mule-snowflake.xsd">
+	<flow name="sfdc-snowflake-case-sync" doc:id="77c53610-3f5c-4dd5-bbb1-291d07aa5ba9" >
+		<scheduler doc:name="Scheduler" doc:id="87ac9938-5958-4982-91ca-cb6eded6afd4" >
+			<scheduling-strategy >
+				<cron expression="${secure::scheduler.cron}" timeZone="${secure::scheduler.timezone}"/>
+			</scheduling-strategy>
+		</scheduler>
+		<os:retrieve doc:id="248df889-4814-4d8a-8235-f86cbc729e4b" key="lastRunDate" doc:name="RetrieveLastRunDAte"/>
+		<logger level="INFO" doc:name="Logger" doc:id="ccfe7a91-0c73-418e-8bd9-d4e97dac35b0" message="LastRunDate : #[payload]"/>
+		<choice doc:name="Choice" doc:id="ef52036f-8409-4210-ba91-4e9818f8aa81" >
+			<when expression="#[payload != null]">
+				<set-variable value="#[payload]" doc:name="setLastRunDateVar" doc:id="bc13e0fa-f6d4-468e-9138-78a838afc382" variableName="lastRunDate"/>
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="NoLastRunDate" doc:id="0dcdb7fd-f54f-4ffd-bdaa-865ed1def894" message="Last Run Date is not available"/>
+			</otherwise>
+		</choice>
+		<set-variable value="#[now()]" doc:name="setCurrentRunDate" doc:id="19b48538-a3b3-497f-9f28-23ae65e47874" variableName="runDate"/>
+		<ee:transform doc:name="PrepareSalesforceQury" doc:id="90b71759-8a1f-4287-9451-43139c0ffcbb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+if(vars.lastRunDate != null)
+	"Select * from Case where updatedTimeStamp > " ++ vars.lastRunDate
+else
+	"Select * from Case"]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:query-all doc:name="Query all" doc:id="c4cec844-9b1b-4c94-bc85-33d3dd6c4cda" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[#[payload]]]></salesforce:salesforce-query>
+		</salesforce:query-all>
+		<logger level="INFO" doc:name="Logger" doc:id="db47c2ea-6c95-435d-bddd-447ca2d23c65" message="No of records retrieved from Salesforce: sizeOf(payload)"/>
+		<batch:job jobName="Batch_Job" doc:id="e4f285cf-643f-4ccd-805c-97a044f33543" >
+			<batch:process-records >
+				<batch:step name="ProcessUSARecords" doc:id="e2bbc8e1-7fd0-462e-87ab-6dcd64056da6" acceptExpression='#[payload.country == "USA"]'>
+					<ee:transform doc:name="transformToSnowFlakeobject" doc:id="59dbfd6a-d76e-44ea-8677-6f53a5b68306" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<batch:aggregator doc:name="Batch Aggregator" doc:id="b43c3a5c-7330-49b4-9cd2-feefb89be6eb" streaming="true">
+						<snowflake:bulk-insert doc:name="insertInUSATable" doc:id="315c3988-6e8d-4178-a120-385f6fefee36" config-ref="Snowflake_Config">
+							<snowflake:sql ><![CDATA[Insert into case.USA(Country) values(:country)]]></snowflake:sql>
+						</snowflake:bulk-insert>
+					</batch:aggregator>
+				</batch:step>
+				<batch:step name="ProcessCANRecords" doc:id="76c02b3d-e026-4e95-b3cf-df3ec4b521e5" acceptExpression='#[payload.country == "CAN"]'>
+					<ee:transform doc:name="transformToSnowFlakeobject" doc:id="5806a94a-5366-43f5-a955-bd1e73714d23" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<batch:aggregator doc:name="Batch Aggregator" doc:id="7607a285-496a-489b-adac-336b30678635" streaming="true">
+						<snowflake:bulk-insert doc:name="insertInCANTable" doc:id="714bd22d-e3d0-454f-a08e-55bb1430dd4e" config-ref="Snowflake_Config">
+							<snowflake:sql ><![CDATA[Insert into case.CAN(Country) values(:country)]]></snowflake:sql>
+						</snowflake:bulk-insert>
+					</batch:aggregator>
+				</batch:step>
+				<batch:step name="ProcessAUSRecords" doc:id="4c9e145a-3407-41f3-b78e-380b1031263c" acceptExpression='#[payload.country == "AUS"]'>
+					<ee:transform doc:name="transformToSnowFlakeobject" doc:id="78197c98-64c0-4dcf-87ca-dc2e44f30044" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<batch:aggregator doc:name="Batch Aggregator" doc:id="c35baac5-0775-4bea-b2bd-7920843f13ee" streaming="true">
+						<snowflake:bulk-insert doc:name="insertInAUSTable" doc:id="ad17ace0-3e86-47af-bf76-827a1b77fd6a" config-ref="Snowflake_Config">
+							<snowflake:sql ><![CDATA[Insert into case.AUS(Country) values(:country)]]></snowflake:sql>
+						</snowflake:bulk-insert>
+					</batch:aggregator>
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete >
+				<os:store doc:name="UpdateLastRunDate" doc:id="681e9600-6140-46d4-b76b-e165da3676b3" key="lastRunDate">
+					<os:value ><![CDATA[#[vars.runDate]]]></os:value>
+				</os:store>
+			</batch:on-complete>
+		</batch:job>
+	</flow>
+</mule>
